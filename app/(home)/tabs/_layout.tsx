@@ -20,6 +20,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Octicons name="home" size={size} color={color} />
           ),
+          headerShown: false
         }}
       />
       <Tabs.Screen
