@@ -1,19 +1,34 @@
 import {
-	createContext,
-	PropsWithChildren,
-	useContext,
-	useEffect,
-	useState,
+  createContext,
+  PropsWithChildren,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
+import { supabase } from "@/config/supabase";
 import { Session, User } from "@supabase/supabase-js";
 
-import { supabase } from "@/config/supabase";
+type SignUpPayload = {
+  email: string;
+  password: string;
+  full_name: string;
+  phone_number: string;
+  role: "REQUESTER" | "RIDER";
+  profileData?: Record<string, any>;
+};
+
+type SignUpResponse = {
+  success: boolean;
+  user_id: string;
+  auth_user?: any; // refine later with Supabase Auth types
+  user_row?: any;  // the row from your "users" table
+};
 
 type AuthState = {
   initialized: boolean;
   session: Session | null;
-  signUp: (email: string, password: string) => Promise<User | null>;
+  signUp: (values: SignUpPayload) => Promise<SignUpResponse | null>;
   signIn: (email: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
 };
@@ -32,28 +47,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [initialized, setInitialized] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
 
-  const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+  const signUp = async (payload: SignUpPayload) => {
+    try {
+      const response = await fetch(
+        process.env.EXPO_PUBLIC_SIGNUP_URL as string,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
-    if (error) {
-      console.error("Error signing up:", error);
-      throw error; // allow caller to handle it
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.error || "Signup failed");
+      }
+
+      const data: SignUpResponse = await response.json();
+      return data;
+    } catch (err) {
+      console.error("Signup error:", err);
+      throw err;
     }
-
-    if (!data.user) {
-      console.warn("No user returned from sign up");
-      return null;
-    }
-
-    // Optional: if session is returned, set it in state
-    if (data.session) {
-      setSession(data.session);
-    }
-
-    return data.user; // return user so caller can use user.id
   };
 
   const signIn = async (email: string, password: string) => {
@@ -64,7 +81,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     if (error) {
       console.error("Error signing in:", error);
-      throw error; // Let caller handle it like in signUp
+      throw error;
     }
 
     if (!data.user) {
@@ -81,10 +98,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
-
     if (error) {
       console.error("Error signing out:", error);
-      return;
     } else {
       console.log("User signed out");
     }

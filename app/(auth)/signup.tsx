@@ -1,7 +1,6 @@
 import CustomButton from "@/components/ui/CustomButton";
 import Loader from "@/components/ui/Loader";
 import { ItalicText, Text, WhiteText } from "@/components/ui/Text";
-import { supabase } from "@/config/supabase";
 import { useAuth } from "@/context/supabase-provider";
 import logger from "@/utils/logger/custom-logger";
 import { signUpSchema } from "@/utils/validationSchema/authValidationSchema";
@@ -32,7 +31,7 @@ export default function SignUp() {
   const [passwordVisible, setPasswordVisible] = useState<boolean>(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] =
     useState<boolean>(false);
-  const { signUp } = useAuth();
+  const { signUp, signIn } = useAuth();
 
   const {
     control,
@@ -50,37 +49,31 @@ export default function SignUp() {
   });
 
   const onSubmit = async (form: FormValues) => {
-    const { email, password } = form;
-
     try {
-      const user = await signUp(email, password);
+      const response = await signUp({
+        email: form.email,
+        password: form.password,
+        full_name: form.fullName,
+        phone_number: form.phoneNumber,
+        role: "REQUESTER",
+      });
 
-      if (!user) {
-        Alert.alert("Error", "User creation failed");
-        return;
-      }
-
-      const { error: insertError } = await supabase.from("users").insert([
-        {
-          id: user.id,
-          created_at: new Date(),
-          full_name: form.fullName,
-          email: form.email,
-          role: "REQUESTER",
-          phone_number: form.phoneNumber,
-          email_verified: true,
-        },
-      ]);
-
-      if (insertError) {
-        logger.info("APP", `This is the error ${insertError}`);
-      } else {
+      if (response?.success) {
+        const signInResponse = await signIn(form.email, form.password);
+        if (!signInResponse) {
+          Alert.alert(
+            "Error",
+            "Account created but login failed. Please try signing in"
+          );
+        }
         router.replace("/(home)/tabs");
-        Alert.alert("APP", "Registration successfull");
+        Alert.alert("APP", "Registration successful");
       }
-    } catch (error: Error | any) {
-      logger.error("APP", `There was an error with signup ${error}`);
-      Alert.alert("Error", "There was an issue with signup");
+
+      logger.info("APP", `Signup result: ${JSON.stringify(response)}`);
+    } catch (err) {
+      Alert.alert("Error", "Signup failed, please try again.");
+      logger.error("APP", `${err}`);
     }
   };
 
