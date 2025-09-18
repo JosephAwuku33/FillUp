@@ -11,12 +11,12 @@ import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Alert,
-  SafeAreaView,
   ScrollView,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type FormValues = {
   fullName: string;

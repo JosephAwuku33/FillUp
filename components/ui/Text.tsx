@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontFamily: "Mogra",
     fontWeight: 400,
-    fontSize: 32,
+    fontSize: 30,
     color: "white"
   },
 });
